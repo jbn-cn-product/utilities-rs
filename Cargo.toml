@@ -1,0 +1,9 @@
+[package]
+name = "utilities-rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
+hex = "0.4.3"
+rand = "0.8.5"
