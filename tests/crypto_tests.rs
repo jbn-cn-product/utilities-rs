@@ -2,11 +2,11 @@ use utilities_rs::crypto;
 use hex;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
-use rand::RngCore;
+use rand::TryRngCore;
 
 #[test]
 fn test_random_key_pair_generation() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk_bytes = hex::decode(sk_hex).unwrap();
     let pk_bytes = hex::decode(pk_hex).unwrap();
 
@@ -23,7 +23,7 @@ fn test_random_key_pair_generation() {
 fn test_sign_and_verify_valid_message() {
     let mut csprng = OsRng;
     let mut sk_bytes = [0u8; 32];
-    csprng.fill_bytes(&mut sk_bytes);
+    csprng.try_fill_bytes(&mut sk_bytes).unwrap();
     let signing_key = SigningKey::from_bytes(&sk_bytes);
     let verifying_key = signing_key.verifying_key();
 
@@ -40,7 +40,7 @@ fn test_sign_and_verify_valid_message() {
 fn test_sign_and_verify_empty_message() {
     let mut csprng = OsRng;
     let mut sk_bytes = [0u8; 32];
-    csprng.fill_bytes(&mut sk_bytes);
+    csprng.try_fill_bytes(&mut sk_bytes).unwrap();
     let signing_key = SigningKey::from_bytes(&sk_bytes);
     let verifying_key = signing_key.verifying_key();
 
@@ -57,7 +57,7 @@ fn test_sign_and_verify_empty_message() {
 fn test_verify_with_incorrect_signature() {
     let mut csprng = OsRng;
     let mut sk_bytes = [0u8; 32];
-    csprng.fill_bytes(&mut sk_bytes);
+    csprng.try_fill_bytes(&mut sk_bytes).unwrap();
     let signing_key = SigningKey::from_bytes(&sk_bytes);
     let verifying_key = signing_key.verifying_key();
 
@@ -75,7 +75,7 @@ fn test_verify_with_incorrect_signature() {
 fn test_verify_with_incorrect_message() {
     let mut csprng = OsRng;
     let mut sk_bytes = [0u8; 32];
-    csprng.fill_bytes(&mut sk_bytes);
+    csprng.try_fill_bytes(&mut sk_bytes).unwrap();
     let signing_key = SigningKey::from_bytes(&sk_bytes);
     let verifying_key = signing_key.verifying_key();
 
@@ -91,12 +91,12 @@ fn test_verify_with_incorrect_message() {
 fn test_verify_with_incorrect_public_key() {
     let mut csprng = OsRng;
     let mut sk_bytes_1 = [0u8; 32];
-    csprng.fill_bytes(&mut sk_bytes_1);
+    csprng.try_fill_bytes(&mut sk_bytes_1).unwrap();
     let signing_key_1 = SigningKey::from_bytes(&sk_bytes_1);
     let _verifying_key_1 = signing_key_1.verifying_key();
 
     let mut sk_bytes_2 = [0u8; 32];
-    csprng.fill_bytes(&mut sk_bytes_2);
+    csprng.try_fill_bytes(&mut sk_bytes_2).unwrap();
     let signing_key_2 = SigningKey::from_bytes(&sk_bytes_2);
     let verifying_key_2 = signing_key_2.verifying_key();
 

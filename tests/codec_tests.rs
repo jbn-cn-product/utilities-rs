@@ -1,21 +1,22 @@
-use utilities_rs::{codec, crypto};
+use utilities_rs::{
+    codec:: {self, LEN_KEY, LEN_MSG, LEN_SIG}, crypto};
 use hex;
 
-// Helper to convert hex string secret key to [u8; 32]
-fn sk_from_hex(sk_hex: &str) -> [u8; 32] {
+// Helper to convert hex string secret key to [u8; LEN_KEY]
+fn sk_from_hex(sk_hex: &str) -> [u8; LEN_KEY] {
     let sk_vec = hex::decode(sk_hex).unwrap();
     sk_vec.try_into().unwrap()
 }
 
-// Helper to convert hex string public key to [u8; 32]
-fn pk_from_hex(pk_hex: &str) -> [u8; 32] {
+// Helper to convert hex string public key to [u8; LEN_KEY]
+fn pk_from_hex(pk_hex: &str) -> [u8; LEN_KEY] {
     let pk_vec = hex::decode(pk_hex).unwrap();
     pk_vec.try_into().unwrap()
 }
 
 #[test]
 fn test_encode_decode_simple_message() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk = sk_from_hex(&sk_hex);
     let pk = pk_from_hex(&pk_hex);
 
@@ -36,7 +37,7 @@ fn test_encode_decode_simple_message() {
 
 #[test]
 fn test_encode_decode_empty_message() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk = sk_from_hex(&sk_hex);
     let pk = pk_from_hex(&pk_hex);
 
@@ -56,7 +57,7 @@ fn test_encode_decode_empty_message() {
 
 #[test]
 fn test_encode_decode_long_message() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk = sk_from_hex(&sk_hex);
     let pk = pk_from_hex(&pk_hex);
 
@@ -76,7 +77,7 @@ fn test_encode_decode_long_message() {
 
 #[test]
 fn test_decode_invalid_signature() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk = sk_from_hex(&sk_hex);
     let pk = pk_from_hex(&pk_hex);
 
@@ -95,7 +96,7 @@ fn test_decode_invalid_signature() {
 
 #[test]
 fn test_decode_tampered_message() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk = sk_from_hex(&sk_hex);
     let pk = pk_from_hex(&pk_hex);
 
@@ -104,7 +105,7 @@ fn test_decode_tampered_message() {
 
     let mut encoded = codec::encode(&sk, id, message);
     // Tamper with the message part of the encoded message
-    let msg_start = 2; // After length prefix
+    let msg_start = LEN_MSG; // After length prefix
     encoded[msg_start] = encoded[msg_start].wrapping_add(1);
 
     let decoded = codec::decode(&pk, &encoded);
@@ -113,11 +114,11 @@ fn test_decode_tampered_message() {
 
 #[test]
 fn test_decode_with_incorrect_key() {
-    let (sk_hex_1, pk_hex_1) = crypto::random();
+    let (sk_hex_1, pk_hex_1) = crypto::random().unwrap();
     let sk_1 = sk_from_hex(&sk_hex_1);
     let _pk_1 = pk_from_hex(&pk_hex_1);
 
-    let (_sk_hex_2, pk_hex_2) = crypto::random(); // Generate a different key pair
+    let (_sk_hex_2, pk_hex_2) = crypto::random().unwrap(); // Generate a different key pair
     let pk_2 = pk_from_hex(&pk_hex_2);
 
     let message = b"message for wrong key";
@@ -131,7 +132,7 @@ fn test_decode_with_incorrect_key() {
 
 #[test]
 fn test_decode_truncated_input_too_short_for_len_prefix() {
-    let (_sk_hex, pk_hex) = crypto::random();
+    let (_sk_hex, pk_hex) = crypto::random().unwrap();
     let pk = pk_from_hex(&pk_hex);
 
     let input = vec![0u8; 1]; // Too short for even the length prefix
@@ -141,7 +142,7 @@ fn test_decode_truncated_input_too_short_for_len_prefix() {
 
 #[test]
 fn test_decode_truncated_input_missing_signature() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk = sk_from_hex(&sk_hex);
     let pk = pk_from_hex(&pk_hex);
 
@@ -150,14 +151,14 @@ fn test_decode_truncated_input_missing_signature() {
 
     let encoded = codec::encode(&sk, id, message);
     // Truncate before the signature is complete
-    let truncated_encoded = encoded[0..encoded.len() - 32].to_vec(); // Remove half of signature + id
+    let truncated_encoded = encoded[0..encoded.len() - LEN_KEY].to_vec(); // Remove half of signature + id
     let decoded = codec::decode(&pk, &truncated_encoded);
     assert!(decoded.is_none());
 }
 
 #[test]
 fn test_decode_truncated_input_missing_id() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk = sk_from_hex(&sk_hex);
     let pk = pk_from_hex(&pk_hex);
 
@@ -166,8 +167,8 @@ fn test_decode_truncated_input_missing_id() {
 
     let encoded = codec::encode(&sk, id, message);
     // Truncate just before the ID starts
-    let sig_start = 2 + message.len();
-    let sig_end = sig_start + 64;
+    let sig_start = LEN_MSG + message.len();
+    let sig_end = sig_start + LEN_SIG;
     let truncated_encoded = encoded[0..sig_end].to_vec();
     let decoded = codec::decode(&pk, &truncated_encoded).unwrap();
     assert_eq!(decoded.2, "".to_string());
@@ -175,7 +176,7 @@ fn test_decode_truncated_input_missing_id() {
 
 #[test]
 fn test_decode_message_length_exceeds_input_length() {
-    let (_sk_hex, pk_hex) = crypto::random();
+    let (_sk_hex, pk_hex) = crypto::random().unwrap();
     let pk = pk_from_hex(&pk_hex);
 
     let mut encoded_data = vec![0u8; 100];
@@ -191,7 +192,7 @@ fn test_decode_message_length_exceeds_input_length() {
 
 #[test]
 fn test_encode_decode_id_with_special_chars() {
-    let (sk_hex, pk_hex) = crypto::random();
+    let (sk_hex, pk_hex) = crypto::random().unwrap();
     let sk = sk_from_hex(&sk_hex);
     let pk = pk_from_hex(&pk_hex);
 

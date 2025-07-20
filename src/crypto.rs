@@ -1,17 +1,25 @@
 use ed25519_dalek::{Verifier, SigningKey, Signer, Signature, VerifyingKey};
-use rand::{RngCore, rngs::OsRng};
+use rand::{rngs::OsRng, TryRngCore};
 use crate::LOG_PREFIX;
 
-pub fn random() -> (String, String) {
+pub fn random() -> Option<(String, String)> {
     let mut csprng = OsRng;
     let mut sk = [0u8; 32];
-    csprng.fill_bytes(&mut sk);
-    let signk = SigningKey::from_bytes(&sk);
-    let pk = signk.verifying_key().to_bytes();
-    (
-        hex::encode(&sk),
-        hex::encode(&pk)
-    )
+    match csprng.try_fill_bytes(&mut sk) {
+        Ok(()) => {
+            let signk = SigningKey::from_bytes(&sk);
+            let pk = signk.verifying_key().to_bytes();
+            Some((
+                hex::encode(&sk),
+                hex::encode(&pk)
+            ))
+        },
+        Err(e) => {
+            eprintln!("{} crypto-randome err={}", LOG_PREFIX, e);
+            None
+        }
+    }
+    
 }
 
 pub fn sign(
